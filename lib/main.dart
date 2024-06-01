@@ -20,16 +20,25 @@ class Calculator extends StatefulWidget {
 }
 
 class _CalculatorState extends State<Calculator> {
-  ValueNotifier<String> _displayNotifier = ValueNotifier<String>('0');
+  final ValueNotifier<String> _displayNotifier = ValueNotifier<String>('0');
+  final ValueNotifier<String> _expressionNotifier = ValueNotifier<String>('');
   String _currentNumber = '0';
   String _operand = '';
   double _result = 0.0;
+  bool _justPressedEquals = false;
 
   void _onNumberPressed(String value) {
-    if (_currentNumber == '0' && value != '.') {
+    if (_justPressedEquals) {
       _currentNumber = value;
+      _expressionNotifier.value = value;
+      _justPressedEquals = false;
     } else {
-      _currentNumber += value;
+      if (_currentNumber == '0' && value != '.') {
+        _currentNumber = value;
+      } else {
+        _currentNumber += value;
+      }
+      _expressionNotifier.value += value;
     }
     _displayNotifier.value = _currentNumber;
   }
@@ -41,7 +50,9 @@ class _CalculatorState extends State<Calculator> {
     _operand = value;
     _result = double.parse(_currentNumber);
     _currentNumber = '0';
+    _expressionNotifier.value += ' $value ';
     _displayNotifier.value = _operand;
+    _justPressedEquals = false;
   }
 
   void _onEqualsPressed() {
@@ -50,6 +61,9 @@ class _CalculatorState extends State<Calculator> {
       _operand = '';
     }
     _displayNotifier.value = _result.toString();
+    _currentNumber = _result.toString();
+    _expressionNotifier.value = _currentNumber;
+    _justPressedEquals = true;
   }
 
   void _calculate() {
@@ -75,6 +89,8 @@ class _CalculatorState extends State<Calculator> {
     _currentNumber = '0';
     _operand = '';
     _displayNotifier.value = _currentNumber;
+    _expressionNotifier.value = '';
+    _justPressedEquals = false;
   }
 
   @override
@@ -86,7 +102,16 @@ class _CalculatorState extends State<Calculator> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          ValueListenableBuilder(
+          ValueListenableBuilder<String>(
+            valueListenable: _expressionNotifier,
+            builder: (context, value, child) {
+              return Text(
+                value,
+                style: TextStyle(fontSize: 24, color: Colors.grey),
+              );
+            },
+          ),
+          ValueListenableBuilder<String>(
             valueListenable: _displayNotifier,
             builder: (context, value, child) {
               return Text(
@@ -96,47 +121,25 @@ class _CalculatorState extends State<Calculator> {
             },
           ),
           SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              _buildButton('7'),
-              _buildButton('8'),
-              _buildButton('9'),
-              _buildButton('÷'),
-            ],
+          CalculatorButtonRow(
+            buttons: ['7', '8', '9', '÷'],
+            onPressed: _onButtonPressed,
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              _buildButton('4'),
-              _buildButton('5'),
-              _buildButton('6'),
-              _buildButton('×'),
-            ],
+          CalculatorButtonRow(
+            buttons: ['4', '5', '6', '×'],
+            onPressed: _onButtonPressed,
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              _buildButton('1'),
-              _buildButton('2'),
-              _buildButton('3'),
-              _buildButton('-'),
-            ],
+          CalculatorButtonRow(
+            buttons: ['1', '2', '3', '-'],
+            onPressed: _onButtonPressed,
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              _buildButton('C'),
-              _buildButton('0'),
-              _buildButton('.'),
-              _buildButton('+'),
-            ],
+          CalculatorButtonRow(
+            buttons: ['C', '0', '.', '+'],
+            onPressed: _onButtonPressed,
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              _buildButton('='),
-            ],
+          CalculatorButtonRow(
+            buttons: ['='],
+            onPressed: _onButtonPressed,
           ),
           SizedBox(height: 20),
         ],
@@ -144,23 +147,40 @@ class _CalculatorState extends State<Calculator> {
     );
   }
 
-  Widget _buildButton(String text) {
-    return ElevatedButton(
-      onPressed: () {
-        if (text == 'C') {
-          _onClearPressed();
-        } else if (text == '=') {
-          _onEqualsPressed();
-        } else if (text == '+' || text == '-' || text == '×' || text == '÷') {
-          _onOperatorPressed(text);
-        } else {
-          _onNumberPressed(text);
-        }
-      },
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 20),
-      ),
+  void _onButtonPressed(String text) {
+    if (text == 'C') {
+      _onClearPressed();
+    } else if (text == '=') {
+      _onEqualsPressed();
+    } else if (text == '+' || text == '-' || text == '×' || text == '÷') {
+      _onOperatorPressed(text);
+    } else {
+      _onNumberPressed(text);
+    }
+  }
+}
+
+class CalculatorButtonRow extends StatelessWidget {
+  final List<String> buttons;
+  final Function(String) onPressed;
+
+  const CalculatorButtonRow({super.key, 
+    required this.buttons,
+     required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: buttons.map((text) {
+        return ElevatedButton(
+          onPressed: () => onPressed(text),
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 20),
+          ),
+        );
+      }).toList(),
     );
   }
 }
